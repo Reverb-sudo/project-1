@@ -15,6 +15,8 @@
 
 import config    # Configure from .ini files and command line
 import logging   # Better than print statements
+import os.path
+from os import path
 logging.basicConfig(format='%(levelname)s:%(message)s',
                     level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -71,7 +73,9 @@ CAT = """
 # HTTP response codes, as the strings we will actually send.
 # See:  https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
 # or    http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
-##
+## for localhost:5000/index.html. index.html is request
+# if contains illegal characters, instead of status ok, status forbidden (return message)
+# else if exists in docroot, return its content 
 STATUS_OK = "HTTP/1.0 200 OK\n\n"
 STATUS_FORBIDDEN = "HTTP/1.0 403 Forbidden\n\n"
 STATUS_NOT_FOUND = "HTTP/1.0 404 Not Found\n\n"
@@ -88,11 +92,31 @@ def respond(sock):
     request = str(request, encoding='utf-8', errors='strict')
     log.info("--- Received request ----")
     log.info("Request was {}\n***\n".format(request))
-
+    #log.info("Request:", request)
     parts = request.split()
+    #log.info("parts[1]:", parts[1])
+    if parts[1] is not "/":
+        thepath = get_options().DOCROOT + parts[1]
     if len(parts) > 1 and parts[0] == "GET":
-        transmit(STATUS_OK, sock)
-        transmit(CAT, sock)
+        ##if and else statement. look at request content
+        ##print parts, send different request
+        #if request has illegal characters:
+        if ("~" in parts[1]) or (".." in parts[1]):
+           transmit(STATUS_FORBIDDEN, sock)
+           transmit("Request Forbidden Message; There are illegal characters in the request.", sock) 
+        #elif page not provided or does not exist
+        elif parts[1] == "/" or not os.path.exists(thepath):
+           transmit(STATUS_NOT_FOUND, sock)
+           transmit("Request Not Found; No such page exists.", sock)
+        else:
+            transmit(STATUS_OK, sock)
+            #For whatever kind of file, for that file, give the contents
+            file = open(thepath, "r")
+            reading = file.read()
+            transmit(reading, sock)
+            
+    #else: 
+    #    transmit(CAT, sock)
     else:
         log.info("Unhandled request: {}".format(request))
         transmit(STATUS_NOT_IMPLEMENTED, sock)

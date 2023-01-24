@@ -1,3 +1,7 @@
+Name: Kie Mata MacPherson
+Info: kiem@uoregon.edu
+Description: A simple webpage server.
+
 # UOCIS322 - Project 1 #
 
 This project will get you started with creating a simple webpage server.
